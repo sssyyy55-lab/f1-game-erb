@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F1 2026 戦力予想ゲーム</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap');
+
+* { box-sizing: border-box; }
+html, body { margin:0; padding:0; }
+
+.f1game {
+  --asphalt: #0b0c0e;
+  --asphalt-2: #16181c;
+  --line-white: #eef0f2;
+  --amber: #ffb020;
+  --racegreen: #2ecc71;
+  --racered: #e2312f;
+  --steel: #6b7280;
+  font-family: 'Inter', sans-serif;
+  background: var(--asphalt);
+  color: var(--line-white);
+  min-height: 100vh;
+  padding: 28px 18px 60px;
+  box-sizing: border-box;
+  background-image:
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 10px);
+}
+.f1game * { box-sizing: border-box; }
+
+.f1-header { text-align: center; margin-bottom: 20px; }
+.f1-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  color: var(--amber);
+  text-transform: uppercase;
+}
+.f1-title {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 900;
+  font-size: clamp(24px, 5vw, 38px);
+  letter-spacing: 0.02em;
+  margin: 6px 0 4px;
+  background: linear-gradient(90deg, #fff, #c9ccd1);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.f1-sub {
+  font-size: 13px;
+  color: #9aa0a8;
+  max-width: 520px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+.f1-note {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: var(--steel);
+  text-align: center;
+  margin-top: 10px;
+}
+
+.f1-status {
+  max-width: 560px; margin: 16px auto 0;
+  border-radius: 10px; padding: 11px 16px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; text-align:center;
+  line-height: 1.6;
+}
+.f1-status.pending { background: rgba(255,176,32,0.1); border: 1px solid rgba(255,176,32,0.35); color: var(--amber); }
+.f1-status.ready { background: rgba(46,204,113,0.1); border: 1px solid rgba(46,204,113,0.35); color: var(--racegreen); }
+
+.f1-lights-wrap {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 22px 0;
+}
+.f1-light {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #2a0c0c;
+  border: 2px solid #3a1414;
+  transition: background .25s, box-shadow .25s;
+}
+.f1-light.on {
+  background: var(--racered);
+  box-shadow: 0 0 18px 4px rgba(226,49,47,0.7);
+}
+.f1-light.go {
+  background: var(--racegreen);
+  box-shadow: 0 0 22px 6px rgba(46,204,113,0.8);
+}
+
+.f1-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px;
+  max-width: 980px;
+  margin: 0 auto 30px;
+}
+.f1-card {
+  background: var(--asphalt-2);
+  border: 1px solid #24272c;
+  border-radius: 10px;
+  padding: 14px 14px 12px;
+  cursor: pointer;
+  transition: border-color .15s, transform .15s;
+  position: relative;
+  overflow: hidden;
+}
+.f1-card::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+  background: var(--team-color, var(--steel));
+}
+.f1-card:hover { border-color: #3a3f47; transform: translateY(-2px); }
+.f1-card.picked { opacity: 0.35; pointer-events: none; }
+.f1-card-top { display:flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;}
+.f1-team-name { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 14px; }
+.f1-team-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--team-color, var(--steel)); font-weight: 700;
+}
+.f1-bar-row { display:flex; align-items:center; gap:6px; margin-top:5px; }
+.f1-bar-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color:#8a9099; width: 58px; flex-shrink:0; text-transform:uppercase; letter-spacing:.04em;}
+.f1-bar-track { flex:1; height:5px; background:#26292f; border-radius:3px; overflow:hidden; }
+.f1-bar-fill { height:100%; background: var(--team-color, var(--amber)); border-radius:3px; }
+.f1-bar-val { font-family:'JetBrains Mono', monospace; font-size:9px; color:#9aa0a8; width:22px; text-align:right;}
+
+.f1-section-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  text-align:center;
+  margin: 6px 0 14px;
+  color: var(--line-white);
+}
+.f1-section-sub {
+  font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color:#8a9099;
+  text-align:center; margin: -8px 0 14px;
+}
+
+.f1-pred-wrap {
+  max-width: 640px;
+  margin: 0 auto 24px;
+  background: var(--asphalt-2);
+  border: 1px solid #24272c;
+  border-radius: 12px;
+  padding: 18px;
+}
+.f1-pred-row {
+  display:flex; align-items:center; gap:10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #1c1f24;
+  margin-bottom: 6px;
+  min-height: 40px;
+}
+.f1-pred-rank {
+  font-family:'Orbitron', sans-serif; font-weight:800; font-size:13px;
+  color: var(--amber); width: 22px; text-align:center; flex-shrink:0;
+}
+.f1-pred-empty { font-family:'JetBrains Mono', monospace; font-size:11px; color:#565b62; }
+.f1-pred-name { font-family:'JetBrains Mono', monospace; font-weight:600; font-size:12.5px; flex:1; }
+.f1-pred-remove {
+  background:none; border:none; color:#6b7280; cursor:pointer; font-size:13px;
+  padding: 2px 6px;
+}
+.f1-pred-remove:hover { color: var(--racered); }
+
+.f1-name-row {
+  display:flex; align-items:center; gap:10px; justify-content:center;
+  margin: 4px 0 14px;
+}
+.f1-name-label {
+  font-family:'JetBrains Mono', monospace; font-size:11px; color:#9aa0a8;
+  text-transform:uppercase; letter-spacing:.04em;
+}
+.f1-name-input {
+  background:#1c1f24; border:1px solid #333840; border-radius:7px;
+  color: var(--line-white); font-family:'JetBrains Mono', monospace; font-size:13px;
+  padding: 9px 12px; width: 180px; max-width: 50vw;
+}
+.f1-name-input:focus { outline:none; border-color: var(--amber); }
+
+.f1-actions { display:flex; gap:10px; justify-content:center; margin: 18px 0 8px; flex-wrap: wrap; }
+.f1-btn {
+  font-family:'JetBrains Mono', monospace;
+  font-weight:700; font-size:12px; letter-spacing:.06em; text-transform:uppercase;
+  padding: 11px 22px; border-radius: 8px; border: none; cursor: pointer;
+  transition: transform .1s, opacity .15s;
+}
+.f1-btn:active { transform: scale(0.97); }
+.f1-btn:disabled { opacity: 0.35; cursor:not-allowed; }
+.f1-btn-primary { background: var(--racered); color: #fff; }
+.f1-btn-ghost { background: transparent; color:#9aa0a8; border:1px solid #333840; }
+.f1-btn-small {
+  font-family:'JetBrains Mono', monospace; font-size:10.5px; color:#6b7280;
+  background:none; border:none; text-decoration:underline; cursor:pointer;
+  display:block; margin: 26px auto 0; text-align:center;
+}
+.f1-btn-small:hover { color: var(--amber); }
+
+.f1-saved-msg {
+  max-width: 560px; margin: 18px auto 0; text-align:center;
+  font-family:'JetBrains Mono', monospace; font-size: 12.5px;
+  color: var(--racegreen); background: rgba(46,204,113,0.1);
+  border: 1px solid rgba(46,204,113,0.3); border-radius: 10px; padding: 14px;
+  display:none;
+}
+.f1-saved-msg.show { display:block; }
+
+.f1-results { max-width: 720px; margin: 10px auto 0; display:none; }
+.f1-results.show { display:block; }
+.f1-result-row {
+  display:grid; grid-template-columns: 26px 1fr 90px 1fr; align-items:center; gap:8px;
+  padding: 9px 12px; border-radius: 8px; margin-bottom: 5px;
+  background: #1c1f24; font-family:'JetBrains Mono', monospace; font-size: 12px;
+}
+.f1-result-row.match { background: rgba(46,204,113,0.14); }
+.f1-result-pos { color: var(--amber); font-weight:700; text-align:center; }
+.f1-result-guess { color: var(--line-white); }
+.f1-result-diff { text-align:center; font-size:10.5px; }
+.f1-result-diff.hit { color: var(--racegreen); }
+.f1-result-diff.near { color: var(--amber); }
+.f1-result-diff.miss { color: #6b7280; }
+.f1-result-actual { color:#9aa0a8; text-align:right; }
+
+.f1-score-banner {
+  text-align:center; margin-bottom: 16px;
+  font-family:'Orbitron', sans-serif; font-weight:800;
+}
+.f1-score-num { font-size: 34px; color: var(--amber); }
+.f1-score-label { font-size: 11px; color:#9aa0a8; font-family:'JetBrains Mono', monospace; letter-spacing:.08em; text-transform:uppercase; }
+
+.f1-board-wrap {
+  max-width: 480px; margin: 26px auto 0;
+  background: var(--asphalt-2); border: 1px solid #24272c; border-radius: 12px;
+  padding: 16px 18px 18px;
+}
+.f1-board-status {
+  font-family:'JetBrains Mono', monospace; font-size: 10.5px; color:#565b62;
+  text-align:center; margin-bottom: 10px;
+}
+.f1-board-row {
+  display:grid; grid-template-columns: 26px 1fr 50px; align-items:center; gap:8px;
+  padding: 7px 10px; border-radius: 7px; margin-bottom: 4px;
+  font-family:'JetBrains Mono', monospace; font-size: 12px;
+  background: #1c1f24;
+}
+.f1-board-row.me { background: rgba(255,176,32,0.14); border: 1px solid rgba(255,176,32,0.4); }
+.f1-board-rank { color: var(--amber); font-weight:700; text-align:center; }
+.f1-board-name { color: var(--line-white); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.f1-board-score { color:#9aa0a8; text-align:right; }
+.f1-board-empty { font-family:'JetBrains Mono', monospace; font-size:11.5px; color:#565b62; text-align:center; padding: 10px 0; }
+
+.f1-admin-wrap {
+  max-width: 640px; margin: 30px auto 0;
+  background: var(--asphalt-2); border: 1px dashed #333840; border-radius: 12px;
+  padding: 18px; display:none;
+}
+.f1-admin-wrap.show { display:block; }
+.f1-admin-label-row { display:flex; align-items:center; gap:10px; margin-bottom: 12px; }
+.f1-admin-input {
+  background:#1c1f24; border:1px solid #333840; border-radius:7px;
+  color: var(--line-white); font-family:'JetBrains Mono', monospace; font-size:12.5px;
+  padding: 9px 12px; flex:1;
+}
+.f1-admin-input:focus { outline:none; border-color: var(--amber); }
+.f1-admin-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom: 14px; }
+.f1-admin-chip {
+  font-family:'JetBrains Mono', monospace; font-size: 11px; font-weight:600;
+  padding: 7px 11px; border-radius: 20px; cursor:pointer;
+  background:#1c1f24; border: 1px solid var(--chip-color, #333840); color: var(--chip-color, #9aa0a8);
+  transition: opacity .15s;
+}
+.f1-admin-chip.picked { opacity: 0.3; pointer-events:none; }
+
+.f1-conn-error {
+  max-width: 560px; margin: 16px auto 0; text-align:center;
+  font-family:'JetBrains Mono', monospace; font-size: 12px;
+  color: var(--racered); background: rgba(226,49,47,0.1);
+  border: 1px solid rgba(226,49,47,0.35); border-radius: 10px; padding: 12px;
+  display:none;
+}
+.f1-conn-error.show { display:block; }
+</style>
+</head>
+<body>
+
+<div class="f1game" id="f1game">
+  <div class="f1-header">
+    <div class="f1-eyebrow">Race Prediction Simulator</div>
+    <div class="f1-title">F1 2026 戦力予想ゲーム</div>
+    <div class="f1-sub">ドライバー成績・チーム予算・過去のレース結果を参考に、チームカードをタップして次戦のコンストラクターズ順位を予想しよう。</div>
+    <div class="f1-note">※ 参考データはCowork収集(2026年8月14日・第11戦時点)。採点は実際のレース結果が入力され次第行われます。</div>
+  </div>
+
+  <div class="f1-conn-error" id="connError">Firebaseへの接続に失敗しました。ネットワーク接続、またはfirebaseConfigの設定値をご確認ください。</div>
+  <div class="f1-status pending" id="statusBanner">読み込み中…</div>
+
+  <div class="f1-lights-wrap" id="lights">
+    <div class="f1-light" data-i="0"></div>
+    <div class="f1-light" data-i="1"></div>
+    <div class="f1-light" data-i="2"></div>
+    <div class="f1-light" data-i="3"></div>
+    <div class="f1-light" data-i="4"></div>
+  </div>
+
+  <div class="f1-section-title" style="margin-top:20px;">チームを選んで予想順位に追加</div>
+  <div class="f1-section-sub">カードの数値はCowork調査データ(ドライバー成績・資金力・過去実績)の参考情報です</div>
+  <div class="f1-grid" id="teamGrid"></div>
+
+  <div class="f1-pred-wrap">
+    <div class="f1-section-title" style="margin-top:0;">あなたの予想順位</div>
+    <div class="f1-name-row">
+      <span class="f1-name-label">Player</span>
+      <input type="text" id="nameInput" class="f1-name-input" placeholder="表示名を入力" maxlength="16">
+    </div>
+    <div id="predList"></div>
+    <div class="f1-actions">
+      <button class="f1-btn f1-btn-ghost" id="resetBtn">リセット</button>
+      <button class="f1-btn f1-btn-primary" id="submitBtn" disabled>予想を保存する</button>
+    </div>
+  </div>
+
+  <div class="f1-saved-msg" id="savedMsg"></div>
+
+  <div class="f1-results" id="results">
+    <div class="f1-score-banner">
+      <div class="f1-score-num" id="scoreNum">0</div>
+      <div class="f1-score-label">/ 100 pts &mdash; Prediction Accuracy</div>
+    </div>
+    <div class="f1-section-title">結果比較</div>
+    <div id="resultList"></div>
+  </div>
+
+  <div class="f1-board-wrap" id="boardWrap" style="display:none;">
+    <div class="f1-section-title" style="margin-top:0;">みんなのランキング</div>
+    <div class="f1-board-status" id="boardStatus">読み込み中…</div>
+    <div id="boardList"></div>
+  </div>
+
+  <button class="f1-btn-small" id="adminToggle">🏁 レース結果が発表されたら入力する（主催者用）</button>
+
+  <div class="f1-admin-wrap" id="adminWrap">
+    <div class="f1-section-title" style="margin-top:0;">公式結果を入力</div>
+    <div class="f1-admin-label-row">
+      <input type="text" id="raceLabelInput" class="f1-admin-input" placeholder="レース名（例: 第12戦 オランダGP 8/23）">
+    </div>
+    <div class="f1-section-sub" style="margin-top:0;">1位から順にチームをタップしてください</div>
+    <div class="f1-admin-chips" id="adminChips"></div>
+    <div id="adminPredList"></div>
+    <div class="f1-actions">
+      <button class="f1-btn f1-btn-ghost" id="adminResetBtn">クリア</button>
+      <button class="f1-btn f1-btn-primary" id="adminSaveBtn" disabled>公式結果として保存</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getFirestore, collection, addDoc, getDocs,
+  doc, getDoc, setDoc
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+// ---- Firebase setup ----
+const firebaseConfig = {
+  apiKey: "AIzaSyBJ_0DQB1CLupjgdz2B_P9hICDC-Nvuk8o",
+  authDomain: "f1-prediction-game-fea96.firebaseapp.com",
+  projectId: "f1-prediction-game-fea96",
+  storageBucket: "f1-prediction-game-fea96.firebasestorage.app",
+  messagingSenderId: "170914461066",
+  appId: "1:170914461066:web:08ce6c1fe864fe13a48473"
+};
+
+let db;
+let firebaseOk = true;
+try {
+  const app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+} catch (e) {
+  firebaseOk = false;
+  console.error('Firebase init failed', e);
+}
+
+(function(){
+  const teams = [
+    { code: 'MER', name: 'メルセデス',        color: '#27F4D2', driver: 62, budget: 88, past: 75 },
+    { code: 'FER', name: 'フェラーリ',        color: '#E8002D', driver: 91, budget: 92, past: 63 },
+    { code: 'MCL', name: 'マクラーレン',      color: '#FF8000', driver: 46, budget: 85, past: 94 },
+    { code: 'RBR', name: 'レッドブル',        color: '#3671C6', driver: 55, budget: 90, past: 61 },
+    { code: 'RB',  name: 'レーシングブルズ',  color: '#6692FF', driver: 19, budget: 75, past: 18 },
+    { code: 'ALP', name: 'アルピーヌ',        color: '#00A1E8', driver: 18, budget: 65, past: 13 },
+    { code: 'HAA', name: 'ハース',            color: '#B6BABD', driver: 13, budget: 35, past: 12 },
+    { code: 'AUD', name: 'アウディ',          color: '#BB0A30', driver: 12, budget: 80, past: 11 },
+    { code: 'WIL', name: 'ウィリアムズ',      color: '#64C4FF', driver: 14, budget: 45, past: 16 },
+    { code: 'AMR', name: 'アストンマーティン', color: '#00665E', driver: 23, budget: 70, past: 11 },
+    { code: 'CAD', name: 'キャデラック',      color: '#D4AF37', driver: 19, budget: 78, past: 5 },
+  ];
+  const teamByCode = Object.fromEntries(teams.map(t => [t.code, t]));
+
+  const grid = document.getElementById('teamGrid');
+  const predList = document.getElementById('predList');
+  const submitBtn = document.getElementById('submitBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const results = document.getElementById('results');
+  const resultList = document.getElementById('resultList');
+  const scoreNum = document.getElementById('scoreNum');
+  const nameInput = document.getElementById('nameInput');
+  const statusBanner = document.getElementById('statusBanner');
+  const savedMsg = document.getElementById('savedMsg');
+  const boardWrap = document.getElementById('boardWrap');
+  const boardStatus = document.getElementById('boardStatus');
+  const boardList = document.getElementById('boardList');
+  const connError = document.getElementById('connError');
+
+  const adminToggle = document.getElementById('adminToggle');
+  const adminWrap = document.getElementById('adminWrap');
+  const adminChips = document.getElementById('adminChips');
+  const adminPredList = document.getElementById('adminPredList');
+  const adminResetBtn = document.getElementById('adminResetBtn');
+  const adminSaveBtn = document.getElementById('adminSaveBtn');
+  const raceLabelInput = document.getElementById('raceLabelInput');
+
+  let prediction = [];
+  let adminPick = [];
+  let actualResult = null; // { order: [codes...], label, setAt }
+  let lastSubmitted = null; // { name, order }
+
+  if (!firebaseOk) {
+    connError.classList.add('show');
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function bar(label, val, color){
+    return `<div class="f1-bar-row">
+      <div class="f1-bar-label">${label}</div>
+      <div class="f1-bar-track"><div class="f1-bar-fill" style="width:${val}%; background:${color}"></div></div>
+      <div class="f1-bar-val">${val}</div>
+    </div>`;
+  }
+
+  function renderGrid(){
+    grid.innerHTML = teams.map(t => {
+      const picked = prediction.includes(t.code);
+      return `<div class="f1-card ${picked ? 'picked' : ''}" style="--team-color:${t.color}" data-code="${t.code}">
+        <div class="f1-card-top">
+          <div class="f1-team-name">${t.name}</div>
+          <div class="f1-team-code">${t.code}</div>
+        </div>
+        ${bar('ドライバー', t.driver, t.color)}
+        ${bar('資金力', t.budget, t.color)}
+        ${bar('過去実績', t.past, t.color)}
+      </div>`;
+    }).join('');
+
+    grid.querySelectorAll('.f1-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const code = card.dataset.code;
+        if (prediction.includes(code)) return;
+        prediction.push(code);
+        renderGrid();
+        renderPredList();
+      });
+    });
+  }
+
+  function renderPredList(){
+    predList.innerHTML = teams.map((_, i) => {
+      const code = prediction[i];
+      if (!code) {
+        return `<div class="f1-pred-row"><div class="f1-pred-rank">${i+1}</div><div class="f1-pred-empty">チームを選択してください</div></div>`;
+      }
+      const t = teamByCode[code];
+      return `<div class="f1-pred-row">
+        <div class="f1-pred-rank">${i+1}</div>
+        <div class="f1-pred-name" style="color:${t.color}">${t.name}</div>
+        <button class="f1-pred-remove" data-code="${code}">✕</button>
+      </div>`;
+    }).join('');
+
+    predList.querySelectorAll('.f1-pred-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        prediction = prediction.filter(c => c !== btn.dataset.code);
+        renderGrid();
+        renderPredList();
+      });
+    });
+
+    submitBtn.disabled = prediction.length !== teams.length;
+  }
+
+  function renderAdminChips(){
+    adminChips.innerHTML = teams.map(t => {
+      const picked = adminPick.includes(t.code);
+      return `<div class="f1-admin-chip ${picked ? 'picked' : ''}" style="--chip-color:${t.color}" data-code="${t.code}">${t.name}</div>`;
+    }).join('');
+    adminChips.querySelectorAll('.f1-admin-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const code = chip.dataset.code;
+        if (adminPick.includes(code)) return;
+        adminPick.push(code);
+        renderAdminChips();
+        renderAdminPredList();
+      });
+    });
+  }
+
+  function renderAdminPredList(){
+    adminPredList.innerHTML = teams.map((_, i) => {
+      const code = adminPick[i];
+      if (!code) {
+        return `<div class="f1-pred-row"><div class="f1-pred-rank">${i+1}</div><div class="f1-pred-empty">-</div></div>`;
+      }
+      const t = teamByCode[code];
+      return `<div class="f1-pred-row">
+        <div class="f1-pred-rank">${i+1}</div>
+        <div class="f1-pred-name" style="color:${t.color}">${t.name}</div>
+        <button class="f1-pred-remove" data-code="${code}">✕</button>
+      </div>`;
+    }).join('');
+    adminPredList.querySelectorAll('.f1-pred-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        adminPick = adminPick.filter(c => c !== btn.dataset.code);
+        renderAdminChips();
+        renderAdminPredList();
+      });
+    });
+    adminSaveBtn.disabled = adminPick.length !== teams.length;
+  }
+
+  function runLightsThen(cb){
+    const lights = document.querySelectorAll('.f1-light');
+    let i = 0;
+    const iv = setInterval(() => {
+      if (i < 5) {
+        lights[i].classList.add('on');
+        i++;
+      } else {
+        clearInterval(iv);
+        setTimeout(() => {
+          lights.forEach(l => { l.classList.remove('on'); l.classList.add('go'); });
+          setTimeout(() => {
+            lights.forEach(l => l.classList.remove('go'));
+            cb();
+          }, 500);
+        }, 600);
+      }
+    }, 350);
+  }
+
+  function computeScore(order, actualOrderArr){
+    let score = 0;
+    const rows = order.map((code, i) => {
+      const t = teamByCode[code];
+      const actualIdx = actualOrderArr.indexOf(code);
+      const diff = Math.abs(actualIdx - i);
+      let diffClass = 'miss', diffLabel = `${diff}位差`;
+      if (diff === 0) { diffClass = 'hit'; diffLabel = '的中'; score += 10; }
+      else if (diff === 1) { diffClass = 'near'; diffLabel = '1位差'; score += 5; }
+      else if (diff === 2) { diffClass = 'near'; diffLabel = '2位差'; score += 2; }
+      return { i, t, actualIdx, diff, diffClass, diffLabel };
+    });
+    return { score, rows };
+  }
+
+  function renderResultRows(rows){
+    resultList.innerHTML = rows.map(r => `
+      <div class="f1-result-row ${r.diff === 0 ? 'match' : ''}">
+        <div class="f1-result-pos">${r.i + 1}</div>
+        <div class="f1-result-guess" style="color:${r.t.color}">${r.t.name}</div>
+        <div class="f1-result-diff ${r.diffClass}">${r.diffLabel}</div>
+        <div class="f1-result-actual">実際 ${r.actualIdx + 1}位</div>
+      </div>`).join('');
+  }
+
+  // ---- Firestore helpers ----
+  async function loadActualResult(){
+    if (!firebaseOk) { actualResult = null; updateStatusBanner(); return; }
+    try {
+      const snap = await getDoc(doc(db, 'raceresult', 'actual'));
+      actualResult = snap.exists() ? snap.data() : null;
+    } catch (e) {
+      console.error('loadActualResult failed', e);
+      actualResult = null;
+    }
+    updateStatusBanner();
+  }
+
+  function updateStatusBanner(){
+    if (actualResult && actualResult.order && actualResult.order.length === teams.length) {
+      statusBanner.className = 'f1-status ready';
+      statusBanner.textContent = `🏁 公式結果 反映済み: ${actualResult.label || '結果入力済み'} — 今すぐ採点されます`;
+      submitBtn.textContent = '予想を確定してレース結果へ';
+    } else {
+      statusBanner.className = 'f1-status pending';
+      statusBanner.textContent = '⏳ 公式結果はまだ入力されていません。予想を保存すると、結果発表後にランキングへ反映されます。';
+      submitBtn.textContent = '予想を保存する';
+    }
+  }
+
+  async function savePrediction(name, order){
+    if (!firebaseOk) return;
+    try {
+      await addDoc(collection(db, 'predictions'), { name, order, ts: Date.now() });
+    } catch (e) {
+      console.error('savePrediction failed', e);
+    }
+  }
+
+  async function loadLeaderboard(highlightName, highlightOrder){
+    if (!actualResult || !actualResult.order) {
+      boardWrap.style.display = 'none';
+      return;
+    }
+    boardWrap.style.display = 'block';
+    boardStatus.textContent = '読み込み中…';
+    boardList.innerHTML = '';
+    if (!firebaseOk) {
+      boardStatus.textContent = 'ランキングの読み込みに失敗しました';
+      return;
+    }
+    try {
+      const snap = await getDocs(collection(db, 'predictions'));
+      const entries = snap.docs.map(d => d.data());
+      if (entries.length === 0) {
+        boardStatus.textContent = 'まだ予想がありません。最初のプレイヤーになろう！';
+        return;
+      }
+      const scored = entries.map(e => {
+        const { score } = computeScore(e.order, actualResult.order);
+        return { name: e.name, score, order: e.order, ts: e.ts };
+      });
+      scored.sort((a, b) => b.score - a.score || a.ts - b.ts);
+      boardStatus.textContent = `参加人数: ${scored.length}人`;
+      const top = scored.slice(0, 10);
+      if (top.length === 0) {
+        boardList.innerHTML = '<div class="f1-board-empty">まだ予想がありません</div>';
+        return;
+      }
+      boardList.innerHTML = top.map((e, i) => {
+        const isMe = highlightName && e.name === highlightName &&
+                     JSON.stringify(e.order) === JSON.stringify(highlightOrder);
+        return `<div class="f1-board-row ${isMe ? 'me' : ''}">
+          <div class="f1-board-rank">${i + 1}</div>
+          <div class="f1-board-name">${escapeHtml(e.name || 'ゲスト')}</div>
+          <div class="f1-board-score">${e.score}pt</div>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      console.error('loadLeaderboard failed', e);
+      boardStatus.textContent = 'ランキングの読み込みに失敗しました';
+    }
+  }
+
+  submitBtn.addEventListener('click', async () => {
+    submitBtn.disabled = true;
+    nameInput.disabled = true;
+    const name = (nameInput.value || '').trim().slice(0, 16) || 'ゲスト';
+    const order = [...prediction];
+    lastSubmitted = { name, order };
+    await savePrediction(name, order);
+
+    if (actualResult && actualResult.order) {
+      runLightsThen(() => {
+        const { score, rows } = computeScore(order, actualResult.order);
+        renderResultRows(rows);
+        scoreNum.textContent = score;
+        results.classList.add('show');
+        results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        loadLeaderboard(name, order);
+      });
+    } else {
+      savedMsg.textContent = `予想を保存しました！「${name}」さんの予想は結果発表後に自動採点されます。`;
+      savedMsg.classList.add('show');
+      savedMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  });
+
+  resetBtn.addEventListener('click', () => {
+    prediction = [];
+    results.classList.remove('show');
+    savedMsg.classList.remove('show');
+    nameInput.disabled = false;
+    renderGrid();
+    renderPredList();
+  });
+
+  // ---- admin panel ----
+  adminToggle.addEventListener('click', () => {
+    adminWrap.classList.toggle('show');
+  });
+
+  adminResetBtn.addEventListener('click', () => {
+    adminPick = [];
+    renderAdminChips();
+    renderAdminPredList();
+  });
+
+  adminSaveBtn.addEventListener('click', async () => {
+    if (!firebaseOk) { alert('Firebaseに接続できていないため保存できません。'); return; }
+    adminSaveBtn.disabled = true;
+    const label = (raceLabelInput.value || '').trim().slice(0, 40);
+    const payload = { order: [...adminPick], label, setAt: Date.now() };
+    try {
+      await setDoc(doc(db, 'raceresult', 'actual'), payload);
+      actualResult = payload;
+      updateStatusBanner();
+      adminWrap.classList.remove('show');
+
+      if (lastSubmitted) {
+        const { score, rows } = computeScore(lastSubmitted.order, actualResult.order);
+        renderResultRows(rows);
+        scoreNum.textContent = score;
+        results.classList.add('show');
+        savedMsg.classList.remove('show');
+      }
+      await loadLeaderboard(lastSubmitted && lastSubmitted.name, lastSubmitted && lastSubmitted.order);
+    } catch (e) {
+      console.error('adminSave failed', e);
+      alert('保存に失敗しました。もう一度お試しください。');
+    }
+    adminSaveBtn.disabled = false;
+  });
+
+  renderGrid();
+  renderPredList();
+  renderAdminChips();
+  renderAdminPredList();
+  loadActualResult().then(() => {
+    loadLeaderboard(null, null);
+  });
+})();
+</script>
+</body>
+</html>
