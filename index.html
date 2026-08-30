@@ -71,6 +71,24 @@ html, body { margin:0; padding:0; }
   margin-top: 10px;
 }
 
+.f1-tabs {
+  display:flex; justify-content:center; gap:8px; margin: 22px 0 0;
+  max-width: 640px; margin-left:auto; margin-right:auto;
+}
+.f1-tab {
+  font-family:'Orbitron', sans-serif; font-weight:700; font-size:12.5px;
+  padding: 12px 20px; border-radius: 10px 10px 0 0; cursor:pointer;
+  background: var(--asphalt-2); border: 1px solid #24272c; border-bottom:none;
+  color:#9aa0a8; flex:1; text-align:center;
+  transition: color .15s, background .15s;
+}
+.f1-tab.active {
+  color: var(--line-white); background:#1c1f24; border-color:#333840;
+  box-shadow: 0 -3px 0 var(--amber) inset;
+}
+.f1-tabpanel { display:none; padding-top: 4px; }
+.f1-tabpanel.show { display:block; }
+
 .f1-status {
   max-width: 560px; margin: 16px auto 0;
   border-radius: 10px; padding: 11px 16px;
@@ -127,6 +145,7 @@ html, body { margin:0; padding:0; }
 .f1-card.picked { opacity: 0.35; pointer-events: none; }
 .f1-card-top { display:flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;}
 .f1-team-name { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 14px; }
+.f1-team-sub { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color:#7c828a; margin-top:-4px; margin-bottom:6px;}
 .f1-team-code {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px; color: var(--team-color, var(--steel)); font-weight: 700;
@@ -301,71 +320,138 @@ html, body { margin:0; padding:0; }
 <div class="f1game" id="f1game">
   <div class="f1-header">
     <div class="f1-eyebrow">Race Prediction Simulator</div>
-    <div class="f1-title">F1 2026 戦力予想ゲーム</div>
-    <div class="f1-sub">ドライバー成績・チーム予算・過去のレース結果を参考に、チームカードをタップして次戦のコンストラクターズ順位を予想しよう。</div>
+    <div class="f1-title">F1 2026 予想ゲーム</div>
+    <div class="f1-sub">チームの戦力とドライバーの実力、2つの視点から次戦の順位を予想しよう。</div>
     <div class="f1-note">※ 参考データはCowork収集(2026年8月14日・第11戦時点)。採点は実際のレース結果が入力され次第行われます。</div>
   </div>
 
   <div class="f1-conn-error" id="connError">Firebaseへの接続に失敗しました。ネットワーク接続、またはfirebaseConfigの設定値をご確認ください。</div>
-  <div class="f1-status pending" id="statusBanner">読み込み中…</div>
 
-  <div class="f1-lights-wrap" id="lights">
-    <div class="f1-light" data-i="0"></div>
-    <div class="f1-light" data-i="1"></div>
-    <div class="f1-light" data-i="2"></div>
-    <div class="f1-light" data-i="3"></div>
-    <div class="f1-light" data-i="4"></div>
+  <div class="f1-tabs">
+    <button class="f1-tab active" data-tab="team">🏎️ チーム予想</button>
+    <button class="f1-tab" data-tab="driver">🏁 ドライバー予想</button>
   </div>
 
-  <div class="f1-section-title" style="margin-top:20px;">チームを選んで予想順位に追加</div>
-  <div class="f1-section-sub">カードの数値はCowork調査データ(ドライバー成績・資金力・過去実績)の参考情報です</div>
-  <div class="f1-grid" id="teamGrid"></div>
+  <!-- ============ TEAM PANEL ============ -->
+  <div class="f1-tabpanel show" id="panel-team">
+    <div class="f1-status pending" id="statusBanner-team">読み込み中…</div>
 
-  <div class="f1-pred-wrap">
-    <div class="f1-section-title" style="margin-top:0;">あなたの予想順位</div>
-    <div class="f1-name-row">
-      <span class="f1-name-label">Player</span>
-      <input type="text" id="nameInput" class="f1-name-input" placeholder="表示名を入力" maxlength="16">
+    <div class="f1-lights-wrap" id="lights-team">
+      <div class="f1-light"></div><div class="f1-light"></div><div class="f1-light"></div>
+      <div class="f1-light"></div><div class="f1-light"></div>
     </div>
-    <div id="predList"></div>
-    <div class="f1-actions">
-      <button class="f1-btn f1-btn-ghost" id="resetBtn">リセット</button>
-      <button class="f1-btn f1-btn-primary" id="submitBtn" disabled>予想を保存する</button>
+
+    <div class="f1-section-title" style="margin-top:20px;">チームを選んで予想順位に追加</div>
+    <div class="f1-section-sub">カードの数値はCowork調査データ(ドライバー成績・資金力・過去実績)の参考情報です</div>
+    <div class="f1-grid" id="grid-team"></div>
+
+    <div class="f1-pred-wrap">
+      <div class="f1-section-title" style="margin-top:0;">あなたの予想順位(全11チーム)</div>
+      <div class="f1-name-row">
+        <span class="f1-name-label">Player</span>
+        <input type="text" id="nameInput-team" class="f1-name-input" placeholder="表示名を入力" maxlength="16">
+      </div>
+      <div id="predList-team"></div>
+      <div class="f1-actions">
+        <button class="f1-btn f1-btn-ghost" id="resetBtn-team">リセット</button>
+        <button class="f1-btn f1-btn-primary" id="submitBtn-team" disabled>予想を保存する</button>
+      </div>
+    </div>
+
+    <div class="f1-saved-msg" id="savedMsg-team"></div>
+
+    <div class="f1-results" id="results-team">
+      <div class="f1-score-banner">
+        <div class="f1-score-num" id="scoreNum-team">0</div>
+        <div class="f1-score-label">/ 110 pts &mdash; Prediction Accuracy</div>
+      </div>
+      <div class="f1-section-title">結果比較</div>
+      <div id="resultList-team"></div>
+    </div>
+
+    <div class="f1-board-wrap" id="boardWrap-team" style="display:none;">
+      <div class="f1-section-title" style="margin-top:0;">みんなのランキング(チーム予想)</div>
+      <div class="f1-board-status" id="boardStatus-team">読み込み中…</div>
+      <div id="boardList-team"></div>
+    </div>
+
+    <button class="f1-btn-small" id="adminToggle-team">🏁 レース結果が発表されたら入力する（主催者用）</button>
+
+    <div class="f1-admin-wrap" id="adminWrap-team">
+      <div class="f1-section-title" style="margin-top:0;">公式結果を入力(コンストラクターズ)</div>
+      <div class="f1-admin-label-row">
+        <input type="text" id="raceLabelInput-team" class="f1-admin-input" placeholder="レース名（例: 第12戦 オランダGP 8/23）">
+      </div>
+      <div class="f1-section-sub" style="margin-top:0;">1位から順にチームをタップしてください</div>
+      <div class="f1-admin-chips" id="adminChips-team"></div>
+      <div id="adminPredList-team"></div>
+      <div class="f1-actions">
+        <button class="f1-btn f1-btn-ghost" id="adminResetBtn-team">クリア</button>
+        <button class="f1-btn f1-btn-primary" id="adminSaveBtn-team" disabled>公式結果として保存</button>
+      </div>
     </div>
   </div>
 
-  <div class="f1-saved-msg" id="savedMsg"></div>
+  <!-- ============ DRIVER PANEL ============ -->
+  <div class="f1-tabpanel" id="panel-driver">
+    <div class="f1-status pending" id="statusBanner-driver">読み込み中…</div>
 
-  <div class="f1-results" id="results">
-    <div class="f1-score-banner">
-      <div class="f1-score-num" id="scoreNum">0</div>
-      <div class="f1-score-label">/ 100 pts &mdash; Prediction Accuracy</div>
+    <div class="f1-lights-wrap" id="lights-driver">
+      <div class="f1-light"></div><div class="f1-light"></div><div class="f1-light"></div>
+      <div class="f1-light"></div><div class="f1-light"></div>
     </div>
-    <div class="f1-section-title">結果比較</div>
-    <div id="resultList"></div>
+
+    <div class="f1-section-title" style="margin-top:20px;">ドライバーを選んで予想TOP10に追加</div>
+    <div class="f1-section-sub">カードの数値はCowork調査データ(2026年現在の成績・キャリア通算)の参考情報です</div>
+    <div class="f1-grid" id="grid-driver"></div>
+
+    <div class="f1-pred-wrap">
+      <div class="f1-section-title" style="margin-top:0;">あなたの予想順位(TOP10)</div>
+      <div class="f1-name-row">
+        <span class="f1-name-label">Player</span>
+        <input type="text" id="nameInput-driver" class="f1-name-input" placeholder="表示名を入力" maxlength="16">
+      </div>
+      <div id="predList-driver"></div>
+      <div class="f1-actions">
+        <button class="f1-btn f1-btn-ghost" id="resetBtn-driver">リセット</button>
+        <button class="f1-btn f1-btn-primary" id="submitBtn-driver" disabled>予想を保存する</button>
+      </div>
+    </div>
+
+    <div class="f1-saved-msg" id="savedMsg-driver"></div>
+
+    <div class="f1-results" id="results-driver">
+      <div class="f1-score-banner">
+        <div class="f1-score-num" id="scoreNum-driver">0</div>
+        <div class="f1-score-label">/ 100 pts &mdash; Prediction Accuracy</div>
+      </div>
+      <div class="f1-section-title">結果比較</div>
+      <div id="resultList-driver"></div>
+    </div>
+
+    <div class="f1-board-wrap" id="boardWrap-driver" style="display:none;">
+      <div class="f1-section-title" style="margin-top:0;">みんなのランキング(ドライバー予想)</div>
+      <div class="f1-board-status" id="boardStatus-driver">読み込み中…</div>
+      <div id="boardList-driver"></div>
+    </div>
+
+    <button class="f1-btn-small" id="adminToggle-driver">🏁 レース結果が発表されたら入力する（主催者用）</button>
+
+    <div class="f1-admin-wrap" id="adminWrap-driver">
+      <div class="f1-section-title" style="margin-top:0;">公式結果を入力(ドライバーTOP10)</div>
+      <div class="f1-admin-label-row">
+        <input type="text" id="raceLabelInput-driver" class="f1-admin-input" placeholder="レース名（例: 第12戦 オランダGP 8/23）">
+      </div>
+      <div class="f1-section-sub" style="margin-top:0;">1位から順にドライバーをタップしてください</div>
+      <div class="f1-admin-chips" id="adminChips-driver"></div>
+      <div id="adminPredList-driver"></div>
+      <div class="f1-actions">
+        <button class="f1-btn f1-btn-ghost" id="adminResetBtn-driver">クリア</button>
+        <button class="f1-btn f1-btn-primary" id="adminSaveBtn-driver" disabled>公式結果として保存</button>
+      </div>
+    </div>
   </div>
 
-  <div class="f1-board-wrap" id="boardWrap" style="display:none;">
-    <div class="f1-section-title" style="margin-top:0;">みんなのランキング</div>
-    <div class="f1-board-status" id="boardStatus">読み込み中…</div>
-    <div id="boardList"></div>
-  </div>
-
-  <button class="f1-btn-small" id="adminToggle">🏁 レース結果が発表されたら入力する（主催者用）</button>
-
-  <div class="f1-admin-wrap" id="adminWrap">
-    <div class="f1-section-title" style="margin-top:0;">公式結果を入力</div>
-    <div class="f1-admin-label-row">
-      <input type="text" id="raceLabelInput" class="f1-admin-input" placeholder="レース名（例: 第12戦 オランダGP 8/23）">
-    </div>
-    <div class="f1-section-sub" style="margin-top:0;">1位から順にチームをタップしてください</div>
-    <div class="f1-admin-chips" id="adminChips"></div>
-    <div id="adminPredList"></div>
-    <div class="f1-actions">
-      <button class="f1-btn f1-btn-ghost" id="adminResetBtn">クリア</button>
-      <button class="f1-btn f1-btn-primary" id="adminSaveBtn" disabled>公式結果として保存</button>
-    </div>
-  </div>
 </div>
 
 <script type="module">
@@ -394,58 +480,109 @@ try {
   firebaseOk = false;
   console.error('Firebase init failed', e);
 }
+if (!firebaseOk) document.getElementById('connError').classList.add('show');
 
-(function(){
-  const teams = [
-    { code: 'MER', name: 'メルセデス',        color: '#27F4D2', driver: 62, budget: 88, past: 75 },
-    { code: 'FER', name: 'フェラーリ',        color: '#E8002D', driver: 91, budget: 92, past: 63 },
-    { code: 'MCL', name: 'マクラーレン',      color: '#FF8000', driver: 46, budget: 85, past: 94 },
-    { code: 'RBR', name: 'レッドブル',        color: '#3671C6', driver: 55, budget: 90, past: 61 },
-    { code: 'RB',  name: 'レーシングブルズ',  color: '#6692FF', driver: 19, budget: 75, past: 18 },
-    { code: 'ALP', name: 'アルピーヌ',        color: '#00A1E8', driver: 18, budget: 65, past: 13 },
-    { code: 'HAA', name: 'ハース',            color: '#B6BABD', driver: 13, budget: 35, past: 12 },
-    { code: 'AUD', name: 'アウディ',          color: '#BB0A30', driver: 12, budget: 80, past: 11 },
-    { code: 'WIL', name: 'ウィリアムズ',      color: '#64C4FF', driver: 14, budget: 45, past: 16 },
-    { code: 'AMR', name: 'アストンマーティン', color: '#00665E', driver: 23, budget: 70, past: 11 },
-    { code: 'CAD', name: 'キャデラック',      color: '#D4AF37', driver: 19, budget: 78, past: 5 },
-  ];
-  const teamByCode = Object.fromEntries(teams.map(t => [t.code, t]));
+// ---- tab switching ----
+document.querySelectorAll('.f1-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.f1-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.f1-tabpanel').forEach(p => p.classList.remove('show'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('show');
+  });
+});
 
-  const grid = document.getElementById('teamGrid');
-  const predList = document.getElementById('predList');
-  const submitBtn = document.getElementById('submitBtn');
-  const resetBtn = document.getElementById('resetBtn');
-  const results = document.getElementById('results');
-  const resultList = document.getElementById('resultList');
-  const scoreNum = document.getElementById('scoreNum');
-  const nameInput = document.getElementById('nameInput');
-  const statusBanner = document.getElementById('statusBanner');
-  const savedMsg = document.getElementById('savedMsg');
-  const boardWrap = document.getElementById('boardWrap');
-  const boardStatus = document.getElementById('boardStatus');
-  const boardList = document.getElementById('boardList');
-  const connError = document.getElementById('connError');
+// ---- reference data ----
+const teams = [
+  { code: 'MER', name: 'メルセデス',        sub: 'Russell / Antonelli',   color: '#27F4D2', stats: [['ドライバー',62],['資金力',88],['過去実績',75]] },
+  { code: 'FER', name: 'フェラーリ',        sub: 'Leclerc / Hamilton',    color: '#E8002D', stats: [['ドライバー',91],['資金力',92],['過去実績',63]] },
+  { code: 'MCL', name: 'マクラーレン',      sub: 'Norris / Piastri',      color: '#FF8000', stats: [['ドライバー',46],['資金力',85],['過去実績',94]] },
+  { code: 'RBR', name: 'レッドブル',        sub: 'Verstappen / Hadjar',   color: '#3671C6', stats: [['ドライバー',55],['資金力',90],['過去実績',61]] },
+  { code: 'RB',  name: 'レーシングブルズ',  sub: 'Lawson / Lindblad',     color: '#6692FF', stats: [['ドライバー',19],['資金力',75],['過去実績',18]] },
+  { code: 'ALP', name: 'アルピーヌ',        sub: 'Gasly / Colapinto',     color: '#00A1E8', stats: [['ドライバー',18],['資金力',65],['過去実績',13]] },
+  { code: 'HAA', name: 'ハース',            sub: 'Ocon / Bearman',        color: '#B6BABD', stats: [['ドライバー',13],['資金力',35],['過去実績',12]] },
+  { code: 'AUD', name: 'アウディ',          sub: 'Hulkenberg / Bortoleto',color: '#BB0A30', stats: [['ドライバー',12],['資金力',80],['過去実績',11]] },
+  { code: 'WIL', name: 'ウィリアムズ',      sub: 'Albon / Sainz',         color: '#64C4FF', stats: [['ドライバー',14],['資金力',45],['過去実績',16]] },
+  { code: 'AMR', name: 'アストンマーティン', sub: 'Alonso / Stroll',       color: '#00665E', stats: [['ドライバー',23],['資金力',70],['過去実績',11]] },
+  { code: 'CAD', name: 'キャデラック',      sub: 'Bottas / Perez',        color: '#D4AF37', stats: [['ドライバー',19],['資金力',78],['過去実績',5]] },
+];
 
-  const adminToggle = document.getElementById('adminToggle');
-  const adminWrap = document.getElementById('adminWrap');
-  const adminChips = document.getElementById('adminChips');
-  const adminPredList = document.getElementById('adminPredList');
-  const adminResetBtn = document.getElementById('adminResetBtn');
-  const adminSaveBtn = document.getElementById('adminSaveBtn');
-  const raceLabelInput = document.getElementById('raceLabelInput');
+const drivers = [
+  { code:'VER', name:'フェルスタッペン',  sub:'レッドブル',        color:'#3671C6', stats:[['現在の成績',52],['キャリア',66]] },
+  { code:'HAD', name:'ハジャー',          sub:'レッドブル',        color:'#3671C6', stats:[['現在の成績',35],['キャリア',10]] },
+  { code:'LEC', name:'ルクレール',        sub:'フェラーリ',        color:'#E8002D', stats:[['現在の成績',65],['キャリア',23]] },
+  { code:'HAM', name:'ハミルトン',        sub:'フェラーリ',        color:'#E8002D', stats:[['現在の成績',78],['キャリア',100]] },
+  { code:'RUS', name:'ラッセル',          sub:'メルセデス',        color:'#27F4D2', stats:[['現在の成績',74],['キャリア',16]] },
+  { code:'ANT', name:'アントネッリ',      sub:'メルセデス',        color:'#27F4D2', stats:[['現在の成績',100],['キャリア',13]] },
+  { code:'NOR', name:'ノリス',            sub:'マクラーレン',      color:'#FF8000', stats:[['現在の成績',60],['キャリア',23]] },
+  { code:'PIA', name:'ピアストリ',        sub:'マクラーレン',      color:'#FF8000', stats:[['現在の成績',45],['キャリア',18]] },
+  { code:'ALO', name:'アロンソ',          sub:'アストンマーティン', color:'#00665E', stats:[['現在の成績',5],['キャリア',41]] },
+  { code:'STR', name:'ストロール',        sub:'アストンマーティン', color:'#00665E', stats:[['現在の成績',5],['キャリア',11]] },
+  { code:'GAS', name:'ガスリー',          sub:'アルピーヌ',        color:'#00A1E8', stats:[['現在の成績',23],['キャリア',11]] },
+  { code:'COL', name:'コラピント',        sub:'アルピーヌ',        color:'#00A1E8', stats:[['現在の成績',13],['キャリア',10]] },
+  { code:'ALB', name:'アルボン',          sub:'ウィリアムズ',      color:'#64C4FF', stats:[['現在の成績',7],['キャリア',10]] },
+  { code:'SAI', name:'サインツ',          sub:'ウィリアムズ',      color:'#64C4FF', stats:[['現在の成績',8],['キャリア',16]] },
+  { code:'LAW', name:'ローソン',          sub:'レーシングブルズ',  color:'#6692FF', stats:[['現在の成績',24],['キャリア',10]] },
+  { code:'LIN', name:'リンドブラッド',    sub:'レーシングブルズ',  color:'#6692FF', stats:[['現在の成績',15],['キャリア',10]] },
+  { code:'HUL', name:'ヒュルケンベルグ',  sub:'アウディ',          color:'#BB0A30', stats:[['現在の成績',6],['キャリア',10]] },
+  { code:'BOR', name:'ボルトレト',        sub:'アウディ',          color:'#BB0A30', stats:[['現在の成績',9],['キャリア',10]] },
+  { code:'OCO', name:'オコン',            sub:'ハース',            color:'#B6BABD', stats:[['現在の成績',6],['キャリア',11]] },
+  { code:'BEA', name:'ベアマン',          sub:'ハース',            color:'#B6BABD', stats:[['現在の成績',13],['キャリア',10]] },
+  { code:'BOT', name:'ボッタス',          sub:'キャデラック',      color:'#D4AF37', stats:[['現在の成績',5],['キャリア',24]] },
+  { code:'PER', name:'ペレス',            sub:'キャデラック',      color:'#D4AF37', stats:[['現在の成績',5],['キャリア',17]] },
+];
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function computeScore(order, actualOrderArr){
+  let score = 0;
+  const rows = order.map((code, i) => {
+    const actualIdx = actualOrderArr.indexOf(code);
+    const diff = Math.abs(actualIdx - i);
+    let diffClass = 'miss', diffLabel = `${diff}位差`;
+    if (diff === 0) { diffClass = 'hit'; diffLabel = '的中'; score += 10; }
+    else if (diff === 1) { diffClass = 'near'; diffLabel = '1位差'; score += 5; }
+    else if (diff === 2) { diffClass = 'near'; diffLabel = '2位差'; score += 2; }
+    return { i, code, actualIdx, diff, diffClass, diffLabel };
+  });
+  return { score, rows };
+}
+
+// ---- generic game factory (used for both team mode and driver mode) ----
+function makeGame(cfg){
+  const $ = id => document.getElementById(id + '-' + cfg.ns);
+  const itemByCode = Object.fromEntries(cfg.items.map(t => [t.code, t]));
+
+  const grid = $('grid');
+  const predList = $('predList');
+  const submitBtn = $('submitBtn');
+  const resetBtn = $('resetBtn');
+  const results = $('results');
+  const resultList = $('resultList');
+  const scoreNum = $('scoreNum');
+  const nameInput = $('nameInput');
+  const savedMsg = $('savedMsg');
+  const boardWrap = $('boardWrap');
+  const boardStatus = $('boardStatus');
+  const boardList = $('boardList');
+  const lightsWrap = document.getElementById('lights-' + cfg.ns);
+
+  const adminToggle = $('adminToggle');
+  const adminWrap = $('adminWrap');
+  const adminChips = $('adminChips');
+  const adminPredList = $('adminPredList');
+  const adminResetBtn = $('adminResetBtn');
+  const adminSaveBtn = $('adminSaveBtn');
+  const raceLabelInput = $('raceLabelInput');
+
+  const statusBannerEl = document.getElementById('statusBanner-' + cfg.ns);
 
   let prediction = [];
   let adminPick = [];
-  let actualResult = null; // { order: [codes...], label, setAt }
-  let lastSubmitted = null; // { name, order }
-
-  if (!firebaseOk) {
-    connError.classList.add('show');
-  }
-
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
+  let actualResult = null;
+  let lastSubmitted = null;
 
   function bar(label, val, color){
     return `<div class="f1-bar-row">
@@ -456,23 +593,22 @@ try {
   }
 
   function renderGrid(){
-    grid.innerHTML = teams.map(t => {
+    grid.innerHTML = cfg.items.map(t => {
       const picked = prediction.includes(t.code);
       return `<div class="f1-card ${picked ? 'picked' : ''}" style="--team-color:${t.color}" data-code="${t.code}">
         <div class="f1-card-top">
           <div class="f1-team-name">${t.name}</div>
           <div class="f1-team-code">${t.code}</div>
         </div>
-        ${bar('ドライバー', t.driver, t.color)}
-        ${bar('資金力', t.budget, t.color)}
-        ${bar('過去実績', t.past, t.color)}
+        ${t.sub ? `<div class="f1-team-sub">${t.sub}</div>` : ''}
+        ${t.stats.map(([label, val]) => bar(label, val, t.color)).join('')}
       </div>`;
     }).join('');
 
     grid.querySelectorAll('.f1-card').forEach(card => {
       card.addEventListener('click', () => {
         const code = card.dataset.code;
-        if (prediction.includes(code)) return;
+        if (prediction.includes(code) || prediction.length >= cfg.pickCount) return;
         prediction.push(code);
         renderGrid();
         renderPredList();
@@ -481,12 +617,12 @@ try {
   }
 
   function renderPredList(){
-    predList.innerHTML = teams.map((_, i) => {
+    predList.innerHTML = Array.from({ length: cfg.pickCount }).map((_, i) => {
       const code = prediction[i];
       if (!code) {
-        return `<div class="f1-pred-row"><div class="f1-pred-rank">${i+1}</div><div class="f1-pred-empty">チームを選択してください</div></div>`;
+        return `<div class="f1-pred-row"><div class="f1-pred-rank">${i+1}</div><div class="f1-pred-empty">${cfg.itemLabel}を選択してください</div></div>`;
       }
-      const t = teamByCode[code];
+      const t = itemByCode[code];
       return `<div class="f1-pred-row">
         <div class="f1-pred-rank">${i+1}</div>
         <div class="f1-pred-name" style="color:${t.color}">${t.name}</div>
@@ -502,18 +638,18 @@ try {
       });
     });
 
-    submitBtn.disabled = prediction.length !== teams.length;
+    submitBtn.disabled = prediction.length !== cfg.pickCount;
   }
 
   function renderAdminChips(){
-    adminChips.innerHTML = teams.map(t => {
+    adminChips.innerHTML = cfg.items.map(t => {
       const picked = adminPick.includes(t.code);
       return `<div class="f1-admin-chip ${picked ? 'picked' : ''}" style="--chip-color:${t.color}" data-code="${t.code}">${t.name}</div>`;
     }).join('');
     adminChips.querySelectorAll('.f1-admin-chip').forEach(chip => {
       chip.addEventListener('click', () => {
         const code = chip.dataset.code;
-        if (adminPick.includes(code)) return;
+        if (adminPick.includes(code) || adminPick.length >= cfg.pickCount) return;
         adminPick.push(code);
         renderAdminChips();
         renderAdminPredList();
@@ -522,12 +658,12 @@ try {
   }
 
   function renderAdminPredList(){
-    adminPredList.innerHTML = teams.map((_, i) => {
+    adminPredList.innerHTML = Array.from({ length: cfg.pickCount }).map((_, i) => {
       const code = adminPick[i];
       if (!code) {
         return `<div class="f1-pred-row"><div class="f1-pred-rank">${i+1}</div><div class="f1-pred-empty">-</div></div>`;
       }
-      const t = teamByCode[code];
+      const t = itemByCode[code];
       return `<div class="f1-pred-row">
         <div class="f1-pred-rank">${i+1}</div>
         <div class="f1-pred-name" style="color:${t.color}">${t.name}</div>
@@ -541,11 +677,11 @@ try {
         renderAdminPredList();
       });
     });
-    adminSaveBtn.disabled = adminPick.length !== teams.length;
+    adminSaveBtn.disabled = adminPick.length !== cfg.pickCount;
   }
 
   function runLightsThen(cb){
-    const lights = document.querySelectorAll('.f1-light');
+    const lights = lightsWrap.querySelectorAll('.f1-light');
     let i = 0;
     const iv = setInterval(() => {
       if (i < 5) {
@@ -564,36 +700,22 @@ try {
     }, 350);
   }
 
-  function computeScore(order, actualOrderArr){
-    let score = 0;
-    const rows = order.map((code, i) => {
-      const t = teamByCode[code];
-      const actualIdx = actualOrderArr.indexOf(code);
-      const diff = Math.abs(actualIdx - i);
-      let diffClass = 'miss', diffLabel = `${diff}位差`;
-      if (diff === 0) { diffClass = 'hit'; diffLabel = '的中'; score += 10; }
-      else if (diff === 1) { diffClass = 'near'; diffLabel = '1位差'; score += 5; }
-      else if (diff === 2) { diffClass = 'near'; diffLabel = '2位差'; score += 2; }
-      return { i, t, actualIdx, diff, diffClass, diffLabel };
-    });
-    return { score, rows };
-  }
-
   function renderResultRows(rows){
-    resultList.innerHTML = rows.map(r => `
-      <div class="f1-result-row ${r.diff === 0 ? 'match' : ''}">
+    resultList.innerHTML = rows.map(r => {
+      const t = itemByCode[r.code];
+      return `<div class="f1-result-row ${r.diff === 0 ? 'match' : ''}">
         <div class="f1-result-pos">${r.i + 1}</div>
-        <div class="f1-result-guess" style="color:${r.t.color}">${r.t.name}</div>
+        <div class="f1-result-guess" style="color:${t.color}">${t.name}</div>
         <div class="f1-result-diff ${r.diffClass}">${r.diffLabel}</div>
         <div class="f1-result-actual">実際 ${r.actualIdx + 1}位</div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }
 
-  // ---- Firestore helpers ----
   async function loadActualResult(){
     if (!firebaseOk) { actualResult = null; updateStatusBanner(); return; }
     try {
-      const snap = await getDoc(doc(db, 'raceresult', 'actual'));
+      const snap = await getDoc(doc(db, cfg.resultCollection, cfg.resultDocId));
       actualResult = snap.exists() ? snap.data() : null;
     } catch (e) {
       console.error('loadActualResult failed', e);
@@ -603,13 +725,13 @@ try {
   }
 
   function updateStatusBanner(){
-    if (actualResult && actualResult.order && actualResult.order.length === teams.length) {
-      statusBanner.className = 'f1-status ready';
-      statusBanner.textContent = `🏁 公式結果 反映済み: ${actualResult.label || '結果入力済み'} — 今すぐ採点されます`;
+    if (actualResult && actualResult.order && actualResult.order.length === cfg.pickCount) {
+      statusBannerEl.className = 'f1-status ready';
+      statusBannerEl.textContent = `🏁 公式結果 反映済み: ${actualResult.label || '結果入力済み'} — 今すぐ採点されます`;
       submitBtn.textContent = '予想を確定してレース結果へ';
     } else {
-      statusBanner.className = 'f1-status pending';
-      statusBanner.textContent = '⏳ 公式結果はまだ入力されていません。予想を保存すると、結果発表後にランキングへ反映されます。';
+      statusBannerEl.className = 'f1-status pending';
+      statusBannerEl.textContent = '⏳ 公式結果はまだ入力されていません。予想を保存すると、結果発表後にランキングへ反映されます。';
       submitBtn.textContent = '予想を保存する';
     }
   }
@@ -617,7 +739,7 @@ try {
   async function savePrediction(name, order){
     if (!firebaseOk) return;
     try {
-      await addDoc(collection(db, 'predictions'), { name, order, ts: Date.now() });
+      await addDoc(collection(db, cfg.predictionsCollection), { name, order, ts: Date.now() });
     } catch (e) {
       console.error('savePrediction failed', e);
     }
@@ -636,7 +758,7 @@ try {
       return;
     }
     try {
-      const snap = await getDocs(collection(db, 'predictions'));
+      const snap = await getDocs(collection(db, cfg.predictionsCollection));
       const entries = snap.docs.map(d => d.data());
       if (entries.length === 0) {
         boardStatus.textContent = 'まだ予想がありません。最初のプレイヤーになろう！';
@@ -701,7 +823,6 @@ try {
     renderPredList();
   });
 
-  // ---- admin panel ----
   adminToggle.addEventListener('click', () => {
     adminWrap.classList.toggle('show');
   });
@@ -718,7 +839,7 @@ try {
     const label = (raceLabelInput.value || '').trim().slice(0, 40);
     const payload = { order: [...adminPick], label, setAt: Date.now() };
     try {
-      await setDoc(doc(db, 'raceresult', 'actual'), payload);
+      await setDoc(doc(db, cfg.resultCollection, cfg.resultDocId), payload);
       actualResult = payload;
       updateStatusBanner();
       adminWrap.classList.remove('show');
@@ -745,7 +866,27 @@ try {
   loadActualResult().then(() => {
     loadLeaderboard(null, null);
   });
-})();
+}
+
+makeGame({
+  ns: 'team',
+  items: teams,
+  pickCount: 11,
+  itemLabel: 'チーム',
+  predictionsCollection: 'predictions',
+  resultCollection: 'raceresult',
+  resultDocId: 'actual'
+});
+
+makeGame({
+  ns: 'driver',
+  items: drivers,
+  pickCount: 10,
+  itemLabel: 'ドライバー',
+  predictionsCollection: 'driverpredictions',
+  resultCollection: 'raceresult',
+  resultDocId: 'actual_drivers'
+});
 </script>
 </body>
 </html>
