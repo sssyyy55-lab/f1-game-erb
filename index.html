@@ -389,6 +389,12 @@ html, body { margin:0; padding:0; }
         <button class="f1-btn f1-btn-ghost" id="adminResetBtn-team">クリア</button>
         <button class="f1-btn f1-btn-primary" id="adminSaveBtn-team" disabled>公式結果として保存</button>
       </div>
+      <div class="f1-section-sub" style="margin-top:18px; border-top:1px dashed #333840; padding-top:14px;">
+        次のレースの予想受付を始めるときは、レース名を入力してこちらを押してください（前レースの結果はランキング履歴として残ります）
+      </div>
+      <div class="f1-actions" style="margin-top:0;">
+        <button class="f1-btn f1-btn-ghost" id="startRoundBtn-team">🆕 このレース名で新ラウンドを開始する</button>
+      </div>
     </div>
   </div>
 
@@ -448,6 +454,12 @@ html, body { margin:0; padding:0; }
       <div class="f1-actions">
         <button class="f1-btn f1-btn-ghost" id="adminResetBtn-driver">クリア</button>
         <button class="f1-btn f1-btn-primary" id="adminSaveBtn-driver" disabled>公式結果として保存</button>
+      </div>
+      <div class="f1-section-sub" style="margin-top:18px; border-top:1px dashed #333840; padding-top:14px;">
+        次のレースの予想受付を始めるときは、レース名を入力してこちらを押してください（前レースの結果はランキング履歴として残ります）
+      </div>
+      <div class="f1-actions" style="margin-top:0;">
+        <button class="f1-btn f1-btn-ghost" id="startRoundBtn-driver">🆕 このレース名で新ラウンドを開始する</button>
       </div>
     </div>
   </div>
@@ -576,6 +588,7 @@ function makeGame(cfg){
   const adminResetBtn = $('adminResetBtn');
   const adminSaveBtn = $('adminSaveBtn');
   const raceLabelInput = $('raceLabelInput');
+  const startRoundBtn = $('startRoundBtn');
 
   const statusBannerEl = document.getElementById('statusBanner-' + cfg.ns);
 
@@ -725,21 +738,23 @@ function makeGame(cfg){
   }
 
   function updateStatusBanner(){
+    const roundTag = actualResult && actualResult.label ? `[${actualResult.label}] ` : '';
     if (actualResult && actualResult.order && actualResult.order.length === cfg.pickCount) {
       statusBannerEl.className = 'f1-status ready';
-      statusBannerEl.textContent = `🏁 公式結果 反映済み: ${actualResult.label || '結果入力済み'} — 今すぐ採点されます`;
+      statusBannerEl.textContent = `🏁 ${roundTag}公式結果 反映済み — 今すぐ採点されます`;
       submitBtn.textContent = '予想を確定してレース結果へ';
     } else {
       statusBannerEl.className = 'f1-status pending';
-      statusBannerEl.textContent = '⏳ 公式結果はまだ入力されていません。予想を保存すると、結果発表後にランキングへ反映されます。';
+      statusBannerEl.textContent = `⏳ ${roundTag}公式結果はまだ入力されていません。予想を保存すると、結果発表後にランキングへ反映されます。`;
       submitBtn.textContent = '予想を保存する';
     }
   }
 
   async function savePrediction(name, order){
     if (!firebaseOk) return;
+    const roundId = (actualResult && actualResult.roundId) || null;
     try {
-      await addDoc(collection(db, cfg.predictionsCollection), { name, order, ts: Date.now() });
+      await addDoc(collection(db, cfg.predictionsCollection), { name, order, roundId, ts: Date.now() });
     } catch (e) {
       console.error('savePrediction failed', e);
     }
@@ -759,9 +774,11 @@ function makeGame(cfg){
     }
     try {
       const snap = await getDocs(collection(db, cfg.predictionsCollection));
-      const entries = snap.docs.map(d => d.data());
+      const currentRoundId = actualResult.roundId || null;
+      const entries = snap.docs.map(d => d.data())
+        .filter(e => (e.roundId || null) === currentRoundId);
       if (entries.length === 0) {
-        boardStatus.textContent = 'まだ予想がありません。最初のプレイヤーになろう！';
+        boardStatus.textContent = 'この予想ラウンドにはまだ予想がありません。';
         return;
       }
       const scored = entries.map(e => {
@@ -769,7 +786,7 @@ function makeGame(cfg){
         return { name: e.name, score, order: e.order, ts: e.ts };
       });
       scored.sort((a, b) => b.score - a.score || a.ts - b.ts);
-      boardStatus.textContent = `参加人数: ${scored.length}人`;
+      boardStatus.textContent = `${actualResult.label ? actualResult.label + ' / ' : ''}参加人数: ${scored.length}人`;
       const top = scored.slice(0, 10);
       if (top.length === 0) {
         boardList.innerHTML = '<div class="f1-board-empty">まだ予想がありません</div>';
@@ -836,8 +853,9 @@ function makeGame(cfg){
   adminSaveBtn.addEventListener('click', async () => {
     if (!firebaseOk) { alert('Firebaseに接続できていないため保存できません。'); return; }
     adminSaveBtn.disabled = true;
-    const label = (raceLabelInput.value || '').trim().slice(0, 40);
-    const payload = { order: [...adminPick], label, setAt: Date.now() };
+    const label = (raceLabelInput.value || '').trim().slice(0, 40) || (actualResult && actualResult.label) || '';
+    const roundId = (actualResult && actualResult.roundId) || ('legacy-' + Date.now());
+    const payload = { roundId, order: [...adminPick], label, setAt: Date.now() };
     try {
       await setDoc(doc(db, cfg.resultCollection, cfg.resultDocId), payload);
       actualResult = payload;
@@ -857,6 +875,42 @@ function makeGame(cfg){
       alert('保存に失敗しました。もう一度お試しください。');
     }
     adminSaveBtn.disabled = false;
+  });
+
+  startRoundBtn.addEventListener('click', async () => {
+    if (!firebaseOk) { alert('Firebaseに接続できていないため保存できません。'); return; }
+    const label = (raceLabelInput.value || '').trim().slice(0, 40);
+    if (!label) { alert('レース名を入力してから押してください（例: 第14戦 イタリアGP）'); return; }
+    if (!confirm(`「${label}」の新しい予想ラウンドを開始します。前のレースの結果はランキング履歴として残ります。よろしいですか？`)) return;
+
+    startRoundBtn.disabled = true;
+    const roundId = Date.now() + '-' + label.replace(/\s+/g, '');
+    const payload = { roundId, label, order: null, setAt: Date.now() };
+    try {
+      await setDoc(doc(db, cfg.resultCollection, cfg.resultDocId), payload);
+      actualResult = payload;
+      updateStatusBanner();
+
+      // reset UI for the new round
+      prediction = [];
+      adminPick = [];
+      lastSubmitted = null;
+      results.classList.remove('show');
+      savedMsg.classList.remove('show');
+      nameInput.disabled = false;
+      raceLabelInput.value = '';
+      renderGrid();
+      renderPredList();
+      renderAdminChips();
+      renderAdminPredList();
+      boardWrap.style.display = 'none';
+      adminWrap.classList.remove('show');
+      alert(`「${label}」の予想受付を開始しました。`);
+    } catch (e) {
+      console.error('startRound failed', e);
+      alert('開始に失敗しました。もう一度お試しください。');
+    }
+    startRoundBtn.disabled = false;
   });
 
   renderGrid();
